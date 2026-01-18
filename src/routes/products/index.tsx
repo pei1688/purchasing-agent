@@ -132,30 +132,6 @@ function RouteComponent() {
     );
   }
 
-  // 顯示無資料訊息
-  if (!products || products.length === 0) {
-    return (
-      <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center space-y-4 p-4">
-        <div className="alert alert-info">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            className="h-6 w-6 shrink-0 stroke-current"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <span>目前沒有商品資料</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto flex w-full flex-col space-y-6 px-4 py-8">
       <legend className="text-3xl font-bold">商品列表</legend>
@@ -326,7 +302,6 @@ function RouteComponent() {
                 </td>
               </tr>
             ))}
-
             {filteredProducts.length === 0 && (
               <tr>
                 <td

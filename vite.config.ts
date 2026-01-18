@@ -5,7 +5,6 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-   base:"purchasing-agent",
   plugins: [
     tailwindcss(),
     tanstackRouter({

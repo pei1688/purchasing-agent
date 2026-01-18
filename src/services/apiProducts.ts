@@ -89,8 +89,6 @@ export async function updateProduct(id: string, productData: ProductFormData) {
         }
       }
     }
-
-    toast.success("商品更新成功");
     return updatedProduct;
   } catch (error) {
     console.error("更新商品過程發生錯誤:", error);
@@ -154,15 +152,63 @@ export async function uploadProductImage(file: File): Promise<string> {
 }
 
 export async function deleteProduct(productId: string) {
-  const { error } = await supabase
-    .from("products")
-    .delete()
-    .eq("id", productId); 
+  try {
+    // 1. 先獲取商品資料，取得圖片 URL
+    const { data: product, error: fetchError } = await supabase
+      .from("products")
+      .select("productImages")
+      .eq("id", productId)
+      .single();
 
-  if (error) {
-    console.error("刪除商品失敗:", error);
-    throw new Error(error.message);
+    if (fetchError) {
+      console.error("獲取商品資料失敗:", fetchError);
+      throw new Error(fetchError.message);
+    }
+
+    // 2. 刪除商品記錄（會自動刪除關聯的 variants，如果設定了 cascade）
+    const { error: deleteError } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productId);
+
+    if (deleteError) {
+      console.error("刪除商品失敗:", deleteError);
+      throw new Error(deleteError.message);
+    }
+
+    // 3. 刪除圖片
+    if (product?.productImages && product.productImages.length > 0) {
+      // 從 URL 中提取檔案路徑
+      const filePaths = product.productImages
+        .map((url: string) => {
+          // URL 格式: https://xxx.supabase.co/storage/v1/object/public/productImage/products/filename.jpg
+          // 需要提取: products/filename.jpg
+          const match = url.match(/productImage\/(.+)$/);
+          return match ? match[1] : null;
+        })
+        .filter(Boolean);
+
+      console.log("準備刪除的圖片路徑:", filePaths);
+
+      // 批量刪除圖片
+      if (filePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from("productImage")
+          .remove(filePaths);
+
+        if (storageError) {
+          console.error("刪除圖片失敗:", storageError);
+          // 不拋出錯誤，因為商品已經刪除成功
+          toast.warning("商品已刪除，但部分圖片刪除失敗");
+        } else {
+          console.log("圖片刪除成功");
+        }
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("刪除商品過程發生錯誤:", error);
+    throw error;
   }
-
-  return { success: true };
 }

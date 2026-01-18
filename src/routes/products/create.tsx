@@ -52,24 +52,20 @@ function RouteComponent() {
               {/* Left Column */}
               <div className="lg:col-span-2">
                 <div className="space-y-6">
-                  <FormInfo />
-
-                  <FormTags />
-
                   <FormImage
                     onImageUpload={handleImageSelect}
                     onImageRemove={removeImage}
                     isUploading={isUploading}
                   />
-
-                  <FormInventory />
-
+                  <FormInfo />
                   <FormVariants />
+                  <FormInventory />
                 </div>
               </div>
 
               {/* Right Column */}
               <div className="lg:col-span-1">
+                <FormTags />
                 <FormPrice />
 
                 <button

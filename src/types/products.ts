@@ -12,7 +12,7 @@ export interface ProductFormData {
   productDescription: string;
   productTags: string;
   productImages: string[];
-  inventoryNumber: number;
+  inventoryNumber: string;
   inventoryQuantity: number;
   exchangeRate: number;
   costPrice: number;

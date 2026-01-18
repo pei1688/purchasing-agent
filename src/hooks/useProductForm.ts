@@ -2,12 +2,13 @@ import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   createProducts,
   updateProduct,
   uploadProductImage,
 } from "../services/apiProducts";
-import type { Product, ProductFormData } from "../types/products";
+import type { ProductFormData } from "../types/products";
 
 interface UseProductFormOptions {
   mode?: "create" | "edit";
@@ -20,13 +21,13 @@ export function useProductForm(options: UseProductFormOptions = {}) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const form = useForm<Product>({
+  const form = useForm<ProductFormData>({
     defaultValues: initialData || {
       productName: "",
       productDescription: "",
       productTags: "",
       productImages: [],
-      inventoryNumber: 0,
+      inventoryNumber: "",
       inventoryQuantity: 0,
       exchangeRate: 0,
       costPrice: 0,
@@ -34,10 +35,10 @@ export function useProductForm(options: UseProductFormOptions = {}) {
       variants: [],
     },
   });
+
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  // 重置表單
   useEffect(() => {
     if (initialData) {
       form.reset(initialData);
@@ -50,7 +51,12 @@ export function useProductForm(options: UseProductFormOptions = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       setPendingFiles([]);
+      toast.success("商品建立成功");
       navigate({ to: "/products" });
+    },
+    onError: (error) => {
+      console.error("建立商品失敗:", error);
+      toast.error("建立商品失敗");
     },
   });
 
@@ -61,7 +67,12 @@ export function useProductForm(options: UseProductFormOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["product", productId] });
       setPendingFiles([]);
+      toast.success("商品更新成功");
       navigate({ to: "/products" });
+    },
+    onError: (error) => {
+      console.error("更新商品失敗:", error);
+      toast.error("更新商品失敗");
     },
   });
 
@@ -69,7 +80,7 @@ export function useProductForm(options: UseProductFormOptions = {}) {
     setIsUploading(true);
 
     try {
-      // 1. 上傳所有待上傳的圖片
+      // 1. 上傳圖片
       const uploadedUrls: string[] = [];
 
       if (pendingFiles.length > 0) {
@@ -80,30 +91,35 @@ export function useProductForm(options: UseProductFormOptions = {}) {
         uploadedUrls.push(...newUrls);
       }
 
-      // 2. 合併已有的 URL 和新上傳的 URL
+      // 2. 合併圖片 URL
       const currentImages = form.getValues("productImages") || [];
       const existingUrls = currentImages.filter(
         (img) => typeof img === "string" && img.includes("supabase.co"),
       );
-
       const allImageUrls = [...existingUrls, ...uploadedUrls];
 
-      // 3. 準備提交的資料
-      const submitData = {
-        ...data,
+      // 3. 分離 variants 和商品資料
+      const { variants, ...productFields } = data;
+
+      // 4. 準備商品資料（不包含 variants）
+      const productData = {
+        ...productFields,
         productImages: allImageUrls,
-        variants: data.variants || [],
       };
-      // 4. 提交表單
+
+      // 5. 提交
       if (mode === "edit" && productId) {
         await updateMutation.mutateAsync({
           id: productId,
-          data: submitData,
+          data: {
+            ...productData,
+            variants: variants || [],
+          },
         });
       } else {
         await createMutation.mutateAsync({
-          productData: submitData,
-          variants: submitData.variants,
+          productData,
+          variants: variants || [],
         });
       }
     } catch (error) {
@@ -113,16 +129,12 @@ export function useProductForm(options: UseProductFormOptions = {}) {
     }
   });
 
-  // 處理圖片選擇 - 只建立預覽,不上傳
   const handleImageSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const newFiles = Array.from(files);
-
-    // 更新待上傳的檔案列表
     setPendingFiles((prev) => [...prev, ...newFiles]);
 
-    // 建立預覽 URL (使用 blob URL)
     const previewUrls = newFiles.map((file) => URL.createObjectURL(file));
     const currentImages = form.getValues("productImages") || [];
     form.setValue("productImages", [...currentImages, ...previewUrls]);
@@ -132,9 +144,7 @@ export function useProductForm(options: UseProductFormOptions = {}) {
     const currentImages = form.getValues("productImages") || [];
     const imageToRemove = currentImages[index];
 
-    // 如果是 blob URL,從待上傳列表中移除對應的 File
     if (imageToRemove?.startsWith("blob:")) {
-      // 找到對應的 File index
       const blobUrls = currentImages.filter((img) => img?.startsWith("blob:"));
       const blobIndex = blobUrls.indexOf(imageToRemove);
 
@@ -142,11 +152,9 @@ export function useProductForm(options: UseProductFormOptions = {}) {
         setPendingFiles((prev) => prev.filter((_, i) => i !== blobIndex));
       }
 
-      // 釋放 blob URL
       URL.revokeObjectURL(imageToRemove);
     }
 
-    // 從表單中移除
     const newImages = currentImages.filter((_, i) => i !== index);
     form.setValue("productImages", newImages);
   };

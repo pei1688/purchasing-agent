@@ -1,10 +1,10 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/products")({
-  component: ProductLayout,
+  component: RouteComponent,
 });
 
-function ProductLayout() {
+function RouteComponent() {
   return (
     <div className="drawer lg:drawer-open">
       <input id="my-drawer-4" type="checkbox" className="drawer-toggle" />
